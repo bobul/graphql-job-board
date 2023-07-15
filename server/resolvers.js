@@ -28,7 +28,7 @@ export const resolvers = {
         company: (job) => getCompany(job.companyId)
     },
     Mutation: {
-        createJob: (_root, {title, description}) => {
+        createJob: (_root, {input: {title, description}}) => {
             const companyId = 'FjcJCHJALA4i';
             return createJob({companyId, title, description});
         },
