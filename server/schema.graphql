@@ -4,6 +4,10 @@ type Query {
     company(id: ID!): Company
 }
 
+type Mutation {
+
+}
+
 type Company {
     id: ID!,
     name: String!,
