@@ -4,7 +4,7 @@ import {GraphQLError} from "graphql/error/index.js";
 
 export const resolvers = {
     Query: {
-        jobs: () => getJobs(),
+        jobs: (_root, {limit}) => getJobs(limit),
         job: async (_root, {id}) => {
             const job = await getJob(id);
             if (!job) {
@@ -25,31 +25,33 @@ export const resolvers = {
     },
     Job: {
         date: (job) => toIsoDate(job.createdAt),
-        company: (job) => getCompany(job.companyId)
+        company: (job, _args, {companyLoader}) => {
+            return companyLoader.load(job.companyId)
+        },
     },
     Mutation: {
         createJob: (_root, {input: {title, description}}, {user}) => {
-            if (!user){
+            if (!user) {
                 throw unauthorizedError('Missing authentication!');
             }
             return createJob({companyId: user.companyId, title, description});
         },
         deleteJob: async (_root, {id}, {user}) => {
-            if (!user){
+            if (!user) {
                 throw unauthorizedError('Missing authentication!');
             }
             const job = await deleteJob(id, user.companyId);
-            if (!job){
+            if (!job) {
                 throw notFoundError('No job found with ID: ' + id);
             }
             return job;
         },
         updateJob: async (_root, {input: {id, title, description}}, {user}) => {
-            if (!user){
+            if (!user) {
                 throw unauthorizedError('Missing authentication!');
             }
             const job = await updateJob({id, title, description, companyId: user.companyId});
-            if (!job){
+            if (!job) {
                 throw notFoundError('No job found with ID: ' + id);
             }
             return job;
@@ -61,7 +63,7 @@ function toIsoDate(value) {
     return value.slice(0, 'yyyy-mm-dd'.length);
 }
 
-function notFoundError(message){
+function notFoundError(message) {
     return new GraphQLError(message, {
         extensions: {
             code: 'NOT_FOUND',
@@ -69,7 +71,7 @@ function notFoundError(message){
     });
 }
 
-function unauthorizedError(message){
+function unauthorizedError(message) {
     return new GraphQLError(message, {
         extensions: {
             code: 'UNAUTHORIZED',
