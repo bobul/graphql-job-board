@@ -1,19 +1,22 @@
-import {GraphQLClient} from "graphql-request";
 import {getAccessToken} from "../auth";
-import {ApolloClient, InMemoryCache, gql} from "@apollo/client";
+import {ApolloClient, InMemoryCache, gql, createHttpLink, ApolloLink, concat} from "@apollo/client";
 
-const client = new GraphQLClient('http://localhost:9000/graphql', {
-    headers: () => {
-        const accessToken = getAccessToken();
+const httpLink = createHttpLink({
+    uri: 'http://localhost:9000/graphql',
+})
+
+const authLink = new ApolloLink((operation, forward) => {
+    const accessToken = getAccessToken();
         if (accessToken) {
-            return {'Authorization': `Bearer ${accessToken}`};
+            operation.setContext({
+                headers: {'Authorization': `Bearer ${accessToken}`},
+            });
         }
-        return {};
-    },
-});
+    return forward(operation);
+})
 
 const apolloClient = new ApolloClient({
-    uri: 'http://localhost:9000/graphql',
+    link: concat(authLink, httpLink),
     cache: new InMemoryCache(),
 });
 
@@ -24,11 +27,17 @@ export async function createJob({title, description}) {
                 id
             }
         }
-    `
-    const {job} = await client.request(mutation, {
-        input: {title, description},
+    `;
+    const {data} = await apolloClient.mutate({
+        mutation,
+        variables: {
+            input: {
+                title,
+                description
+            }
+        },
     });
-    return job
+    return data.job;
 }
 
 export async function getJob(id) {
