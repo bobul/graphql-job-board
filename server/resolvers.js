@@ -34,14 +34,25 @@ export const resolvers = {
             }
             return createJob({companyId: user.companyId, title, description});
         },
-        deleteJob: (_root, {id}, {user}) => {
+        deleteJob: async (_root, {id}, {user}) => {
             if (!user){
                 throw unauthorizedError('Missing authentication!');
             }
-            return deleteJob(id);
+            const job = await deleteJob(id, user.companyId);
+            if (!job){
+                throw notFoundError('No job found with ID: ' + id);
+            }
+            return job;
         },
-        updateJob: (_root, {input: {id, title, description}}) => {
-            return updateJob({id, title, description})
+        updateJob: async (_root, {input: {id, title, description}}, {user}) => {
+            if (!user){
+                throw unauthorizedError('Missing authentication!');
+            }
+            const job = await updateJob({id, title, description, companyId: user.companyId});
+            if (!job){
+                throw notFoundError('No job found with ID: ' + id);
+            }
+            return job;
         }
     },
 };
