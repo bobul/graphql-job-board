@@ -34,7 +34,10 @@ export const resolvers = {
             }
             return createJob({companyId: user.companyId, title, description});
         },
-        deleteJob: (_root, {id}) => {
+        deleteJob: (_root, {id}, {user}) => {
+            if (!user){
+                throw unauthorizedError('Missing authentication!');
+            }
             return deleteJob(id);
         },
         updateJob: (_root, {input: {id, title, description}}) => {
