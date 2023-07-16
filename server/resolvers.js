@@ -4,7 +4,7 @@ import {GraphQLError} from "graphql/error/index.js";
 
 export const resolvers = {
     Query: {
-        jobs: (_root, {limit}) => getJobs(limit),
+        jobs: (_root, {limit, offset}) => getJobs(limit, offset),
         job: async (_root, {id}) => {
             const job = await getJob(id);
             if (!job) {

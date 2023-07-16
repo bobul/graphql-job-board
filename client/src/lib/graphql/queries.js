@@ -58,8 +58,8 @@ export const jobByIdQuery = gql`
 `;
 
 export const jobsQuery = gql`
-    query {
-        jobs {
+    query Jobs($limit: Int, $offset: Int) {
+        jobs(limit: $limit, offset: $offset) {
             id,
             date,
             title,
