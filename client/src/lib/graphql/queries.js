@@ -7,57 +7,71 @@ const httpLink = createHttpLink({
 
 const authLink = new ApolloLink((operation, forward) => {
     const accessToken = getAccessToken();
-        if (accessToken) {
-            operation.setContext({
-                headers: {'Authorization': `Bearer ${accessToken}`},
-            });
-        }
+    if (accessToken) {
+        operation.setContext({
+            headers: {'Authorization': `Bearer ${accessToken}`},
+        });
+    }
     return forward(operation);
 })
 
 const apolloClient = new ApolloClient({
-    link: concat(authLink, httpLink),
-    cache: new InMemoryCache(),
+    link: concat(authLink, httpLink), cache: new InMemoryCache(),
 });
+
+const jobDetailFragment = gql`
+    fragment JobDetail on Job {
+        id,
+        date,
+        title,
+        company {
+            id,
+            name
+        }
+        description
+    }
+`
+
+const jobByIdQuery = gql`
+    query JobById($id: ID!) {
+        job(id: $id) {
+            ...JobDetail
+        }
+    }
+    ${jobDetailFragment}
+`;
 
 export async function createJob({title, description}) {
     const mutation = gql`
         mutation($input: CreateJobInput!) {
             job: createJob(input: $input) {
-                id
+                ...JobDetail
             }
         }
+        ${jobDetailFragment}
     `;
     const {data} = await apolloClient.mutate({
-        mutation,
-        variables: {
+        mutation, variables: {
             input: {
-                title,
-                description
+                title, description
             }
         },
+        update: (cache, {data}) => {
+            cache.writeQuery({
+                query: jobByIdQuery,
+                variables: {
+                    id: data.job.id
+                },
+                data,
+            })
+        }
     });
     return data.job;
 }
 
 export async function getJob(id) {
-    const query = gql`
-        query JobById($id: ID!) {
-            job(id: $id) {
-                id,
-                date,
-                title,
-                company {
-                    id,
-                    name
-                }
-                description
-            }
-        }
-    `;
     const {data} = await apolloClient.query({
-        query,
-        variables: {id},
+        query: jobByIdQuery, variables: {id},
     });
     return data.job;
 }
@@ -79,8 +93,7 @@ export async function getCompany(id) {
         }
     `;
     const {data} = await apolloClient.query({
-        query,
-        variables: {id},
+        query, variables: {id},
     });
     return data.company;
 }
@@ -99,6 +112,6 @@ export async function getJobs() {
             }
         }
     `;
-    const {data} = await apolloClient.query({query});
+    const {data} = await apolloClient.query({query, fetchPolicy: "network-only"});
     return data.jobs;
 }
